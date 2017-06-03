@@ -72,11 +72,11 @@ func NewNewsletterService() *restful.WebService {
 	log.Printf("Adding PUT route: %s\n", path+add)
 	service.Route(service.PUT(add).To(Add))
 
-	log.Printf("Adding DELETE route: %s\n", path+delete)
-	service.Route(service.DELETE(delete).To(Delete))
+	log.Printf("Adding GETroute: %s\n", path+delete)
+	service.Route(service.GET(delete).To(Delete))
 
-	log.Printf("Adding POST route: %s\n", path+verify)
-	service.Route(service.POST(verify).To(Verify))
+	log.Printf("Adding GET route: %s\n", path+verify)
+	service.Route(service.GET(verify).To(Verify))
 
 	log.Printf("Trigger Newsletter via POST route: %s\n", path+send)
 	service.Route(service.POST(send).Filter(basicAuthenticate).To(Send))
@@ -107,9 +107,25 @@ func Add(request *restful.Request, response *restful.Response) {
 	if !db.AddressExists(c.Email) {
 		db.AddEmailAddress(c.Email, token)
 		msg.Txt = "Added " + c.Email + " Token: " + token
+
+		link := "https://drewing.eu:16443/0.1/gomic/newsletter/verify/"
+		link += token
+
+		user, pass, host, port := config.GetSmtpCredentials()
+		m := gomail.NewMessage()
+		m.SetHeader("From", user)
+		m.SetHeader("To", c.Email)
+		m.SetHeader("Subject", "Newsletter Verification")
+		m.SetBody("text/plain", link)
+
+		portInt, _ := strconv.Atoi(port)
+
+		d := gomail.NewDialer(host, portInt, user, pass)
+		d.DialAndSend(m)
 	} else {
 		msg.Txt = c.Email + " already registered"
 	}
+
 	response.WriteEntity(msg)
 }
 
@@ -147,8 +163,9 @@ func Send(request *restful.Request, response *restful.Response) {
 	err = d.DialAndSend(m)
 
 	msg := new(Msg)
+	msg.Txt = "Sent newsletter to: " + strings.Join(recipients, ", ")
 	if err != nil {
-		msg.Txt = err.Error()
+		msg.Txt += err.Error()
 	}
 	response.WriteEntity(msg)
 }

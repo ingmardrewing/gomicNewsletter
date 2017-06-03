@@ -4,15 +4,26 @@ import (
 	"errors"
 	"log"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
+	gomail "gopkg.in/gomail.v2"
+
+	"golang.org/x/crypto/bcrypt"
+
 	restful "github.com/emicklei/go-restful"
+	"github.com/ingmardrewing/gomicNewsletter/config"
 	"github.com/ingmardrewing/gomicNewsletter/db"
 )
 
 type Content struct {
 	Email string
+}
+
+type Newsletter struct {
+	Body    string
+	Subject string
 }
 
 type Msg struct {
@@ -50,6 +61,7 @@ func NewNewsletterService() *restful.WebService {
 	add := "/add"
 	delete := "/delete/{token}"
 	verify := "/verify/{token}"
+	send := "/send"
 
 	service := new(restful.WebService)
 	service.
@@ -65,6 +77,9 @@ func NewNewsletterService() *restful.WebService {
 
 	log.Printf("Adding POST route: %s\n", path+verify)
 	service.Route(service.POST(verify).To(Verify))
+
+	log.Printf("Trigger Newsletter via POST route: %s\n", path+send)
+	service.Route(service.POST(send).Filter(basicAuthenticate).To(Send))
 
 	return service
 }
@@ -110,7 +125,34 @@ func Delete(request *restful.Request, response *restful.Response) {
 	response.WriteEntity(msg)
 }
 
-/*
+func Send(request *restful.Request, response *restful.Response) {
+	err, n := readNewsletter(request)
+	if err != nil {
+		response.WriteErrorString(400, "400: Bad Request ("+err.Error()+")")
+		return
+	}
+
+	user, pass, host, port := config.GetSmtpCredentials()
+	recipients := db.GetNewsletterRecipients()
+
+	m := gomail.NewMessage()
+	m.SetHeader("From", user)
+	m.SetHeader("Bcc", recipients...)
+	m.SetHeader("Subject", n.Subject)
+	m.SetBody("text/plain", n.Body)
+
+	portInt, _ := strconv.Atoi(port)
+
+	d := gomail.NewDialer(host, portInt, user, pass)
+	err = d.DialAndSend(m)
+
+	msg := new(Msg)
+	if err != nil {
+		msg.Txt = err.Error()
+	}
+	response.WriteEntity(msg)
+}
+
 func basicAuthenticate(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
 	err := authenticate(request)
 	log.Println(err)
@@ -130,7 +172,6 @@ func authenticate(req *restful.Request) error {
 	//hash, _ := bcrypt.GenerateFromPassword(given_pass, coast)
 	return bcrypt.CompareHashAndPassword(stored_hash, given_pass)
 }
-*/
 
 func checkContent(c *Content) error {
 	msg := []string{}
@@ -142,6 +183,31 @@ func checkContent(c *Content) error {
 		return errors.New(strings.Join(msg, ", "))
 	}
 	return nil
+}
+
+func checkNewsletter(n *Newsletter) error {
+	msg := []string{}
+	if len(n.Subject) == 0 {
+		msg = append(msg, "No subject for newsletter given")
+	}
+	if len(n.Body) == 0 {
+		msg = append(msg, "No text for newsletter given")
+	}
+
+	if len(msg) > 0 {
+		return errors.New(strings.Join(msg, ", "))
+	}
+	return nil
+}
+
+func readNewsletter(request *restful.Request) (error, *Newsletter) {
+	n := new(Newsletter)
+	request.ReadEntity(n)
+	err := checkNewsletter(n)
+	if err != nil {
+		return err, new(Newsletter)
+	}
+	return nil, n
 }
 
 func readContent(request *restful.Request) (error, *Content) {

@@ -110,6 +110,14 @@ func GetDsn() string {
 	return fmt.Sprintf("%s:%s@%s/%s", user, pass, host, name)
 }
 
+func GetSmtpCredentials() (string, string, string, string) {
+	user := os.Getenv("SMTP_USER")
+	pass := os.Getenv("SMTP_PASS")
+	host := os.Getenv("SMTP_HOST")
+	port := os.Getenv("SMTP_PORT")
+	return user, pass, host, port
+}
+
 func GetTlsPaths() (string, string) {
 	cert := os.Getenv("TLS_CERT_PATH")
 	key := os.Getenv("TLS_KEY_PATH")

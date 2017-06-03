@@ -51,6 +51,25 @@ func AddressExists(email string) bool {
 	return amount != "0"
 }
 
+func GetNewsletterRecipients() []string {
+	rows, err := db.Query("SELECT email FROM newsletter_addresses WHERE double_opt_verified = 1")
+	handleErr(err)
+	defer rows.Close()
+	var (
+		email  string
+		emails []string
+	)
+
+	for rows.Next() {
+		err := rows.Scan(&email)
+		handleErr(err)
+		emails = append(emails, email)
+	}
+	err = rows.Err()
+	handleErr(err)
+	return emails
+}
+
 func handleErr(err error) {
 	if err != nil {
 		log.Fatal(err)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"html/template"
 	"log"
 	"math/rand"
 	"strconv"
@@ -27,7 +28,7 @@ type Newsletter struct {
 }
 
 type Msg struct {
-	Txt string
+	Text string
 }
 
 const (
@@ -64,22 +65,19 @@ func NewNewsletterService() *restful.WebService {
 	send := "/send"
 
 	service := new(restful.WebService)
-	service.
-		Path(path).
-		Consumes(restful.MIME_JSON).
-		Produces(restful.MIME_JSON)
+	service.Path(path)
 
 	log.Printf("Adding PUT route: %s\n", path+add)
-	service.Route(service.PUT(add).To(Add))
+	service.Route(service.PUT(add).Consumes(restful.MIME_JSON).To(Add))
 
 	log.Printf("Adding GETroute: %s\n", path+delete)
-	service.Route(service.GET(delete).To(Delete))
+	service.Route(service.GET(delete).Consumes(restful.MIME_JSON).To(Delete))
 
 	log.Printf("Adding GET route: %s\n", path+verify)
-	service.Route(service.GET(verify).To(Verify))
+	service.Route(service.GET(verify).Consumes(restful.MIME_JSON).To(Verify))
 
 	log.Printf("Trigger Newsletter via POST route: %s\n", path+send)
-	service.Route(service.POST(send).Filter(basicAuthenticate).To(Send))
+	service.Route(service.POST(send).Consumes(restful.MIME_JSON).Filter(basicAuthenticate).To(Send))
 
 	return service
 }
@@ -89,11 +87,16 @@ func Verify(request *restful.Request, response *restful.Response) {
 	msg := new(Msg)
 	if db.TokenExists(token) {
 		db.VerifySubscription(token)
-		msg.Txt = "Successfully verified with token: " + token
+		msg.Text = "Successfully verified with token: " + token
 	} else {
-		msg.Txt = "Token not found: " + token
+		msg.Text = "Token not found: " + token
 	}
-	response.WriteEntity(msg)
+
+	t, err := template.ParseFiles("verified.html")
+	if err != nil {
+		log.Fatalf("Template gave: %s", err)
+	}
+	t.Execute(response.ResponseWriter, msg)
 }
 
 func Add(request *restful.Request, response *restful.Response) {
@@ -106,7 +109,7 @@ func Add(request *restful.Request, response *restful.Response) {
 	msg := new(Msg)
 	if !db.AddressExists(c.Email) {
 		db.AddEmailAddress(c.Email, token)
-		msg.Txt = "Added " + c.Email + " Token: " + token
+		msg.Text = "Added " + c.Email + " Token: " + token
 
 		link := "https://drewing.eu:16443/0.1/gomic/newsletter/verify/"
 		link += token
@@ -123,7 +126,7 @@ func Add(request *restful.Request, response *restful.Response) {
 		d := gomail.NewDialer(host, portInt, user, pass)
 		d.DialAndSend(m)
 	} else {
-		msg.Txt = c.Email + " already registered"
+		msg.Text = c.Email + " already registered"
 	}
 
 	response.WriteEntity(msg)
@@ -134,9 +137,9 @@ func Delete(request *restful.Request, response *restful.Response) {
 	msg := new(Msg)
 	if db.TokenExists(token) {
 		db.DeleteEmailAddressWithToken(token)
-		msg.Txt = "Deleted mailadress with token " + token
+		msg.Text = "Deleted mailadress with token " + token
 	} else {
-		msg.Txt = "No record with exists with token " + token
+		msg.Text = "No record with exists with token " + token
 	}
 	response.WriteEntity(msg)
 }
@@ -167,7 +170,7 @@ func Send(request *restful.Request, response *restful.Response) {
 	}
 
 	msg := new(Msg)
-	msg.Txt = "Sent newsletter to: " + strings.Join(recipients, ", ")
+	msg.Text = "Sent newsletter to: " + strings.Join(recipients, ", ")
 	response.WriteEntity(msg)
 }
 

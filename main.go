@@ -12,7 +12,19 @@ import (
 
 func main() {
 	db.Initialize()
-	restful.Add(service.NewNewsletterService())
+
+	wsContainer := restful.NewContainer()
+	wsContainer.Add(service.NewNewsletterService())
+
+	cors := restful.CrossOriginResourceSharing{
+		ExposeHeaders:  []string{""},
+		AllowedHeaders: []string{"Content-Type", "X-Request-With, Content-Type, Accept"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		CookiesAllowed: false,
+		Container:      wsContainer}
+
+	wsContainer.Filter(cors.Filter)
+	wsContainer.Filter(wsContainer.OPTIONSFilter)
 
 	port := "16443"
 
@@ -23,7 +35,8 @@ func main() {
 	log.Println("Path to key file: " + key)
 	log.Println("Starting to serve via TLS on Port: " + port)
 
-	err := http.ListenAndServeTLS(":"+port, crt, key, nil)
+	server := &http.Server{Addr: ":" + port, Handler: wsContainer}
+	err := server.ListenAndServeTLS(crt, key)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

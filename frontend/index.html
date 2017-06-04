@@ -7,15 +7,15 @@
     <script>
       $(function(){
         $('#formContainer').staticFormHandler({
-          name:"devabodeNewsletterOffer",
-          fields:{
-            "email":{
+          name: "devabodeNewsletterOffer",
+          fields: {
+            "Email": {
               "type":"input"
             }
           },
           url: "https://drewing.eu:16443/0.1/gomic/newsletter/add/",
-          display_condition:function(){ return $(window).scrollTop() > 100; },
-          container:"#formContainer"
+          display_condition: function(){ return $(window).scrollTop() > 100; },
+          container: "#formContainer"
         });
       });
     </script>

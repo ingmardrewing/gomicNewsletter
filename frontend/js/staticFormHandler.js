@@ -93,9 +93,10 @@
       var fields = plugin.opt("fields"),
           data = {};
       for( var f in fields){
-        data[f] = $(f).val();
+        console.log($(f));
+        data[f] = $("#" + f).val();
       }
-      return data;
+      return JSON.stringify(data);
     };
 
     this.onAjaxError = function (err){
@@ -107,14 +108,12 @@
     };
 
     this.sendData = function (){
-      console.log('seding data to');
-      console.log(plugin.opt('url'))
        $.ajax({
         method: "PUT",
         url: plugin.opt('url'),
-        data: '{"Email":"ingmar@drewing.de"}',
+        data: plugin.gatherData(),
         dataType: "json",
-         contentType: "application/json",
+        contentType: "application/json",
         error: plugin.onAjaxError,
         success: plugin.onAjaxSuccess
       });

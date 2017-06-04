@@ -161,12 +161,13 @@ func Send(request *restful.Request, response *restful.Response) {
 
 	d := gomail.NewDialer(host, portInt, user, pass)
 	err = d.DialAndSend(m)
+	if err != nil {
+		response.WriteErrorString(500, "500: Internal Server Error("+err.Error()+")")
+		return
+	}
 
 	msg := new(Msg)
 	msg.Txt = "Sent newsletter to: " + strings.Join(recipients, ", ")
-	if err != nil {
-		msg.Txt += err.Error()
-	}
 	response.WriteEntity(msg)
 }
 

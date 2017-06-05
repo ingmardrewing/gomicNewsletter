@@ -106,9 +106,9 @@ func Verify(request *restful.Request, response *restful.Response) {
 	msg := new(Msg)
 	if db.TokenExists(token) {
 		db.VerifySubscription(token)
-		msg.Text = "Successfully verified with token: " + token
+		msg.Text = "Your email address has successfully been registered."
 	} else {
-		msg.Text = "Token not found: " + token
+		msg.Text = "Unfortunately the e-mail address could not be registered. Token not found: " + token
 	}
 
 	t, err := template.ParseFiles("verified.html")

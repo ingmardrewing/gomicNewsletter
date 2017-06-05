@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/badoux/checkmail"
+
 	gomail "gopkg.in/gomail.v2"
 
 	"golang.org/x/crypto/bcrypt"
@@ -55,6 +57,22 @@ func getRandomString(n int) string {
 		remain--
 	}
 	return string(b)
+}
+
+func getSubcriptionToken(length int) string {
+	t := getRandomString(length)
+	for db.TokenExists(t) {
+		t = getRandomString(length)
+	}
+	return t
+}
+
+func getDeletionToken(length int) string {
+	t := getRandomString(length)
+	for db.DeletionTokenExists(t) {
+		t = getRandomString(length)
+	}
+	return t
 }
 
 func NewNewsletterService() *restful.WebService {
@@ -106,10 +124,19 @@ func Add(request *restful.Request, response *restful.Response) {
 		response.WriteErrorString(400, "400: Bad Request ("+err.Error()+")")
 		return
 	}
-	token := getRandomString(60)
+	token := getSubcriptionToken(60)
+	deletion_token := getDeletionToken(60)
 	msg := new(Msg)
-	if !db.AddressExists(c.Email) {
-		db.AddEmailAddress(c.Email, token)
+	err = checkmail.ValidateFormat(c.Email)
+	log.Println("Given Mail:")
+	log.Println(c.Email)
+	log.Println(err)
+	if err != nil {
+		msg.Text = "no address given"
+	} else if db.AddressExists(c.Email) {
+		msg.Text = "address already registered"
+	} else {
+		db.AddEmailAddress(c.Email, token, deletion_token)
 		msg.Text = "Added " + c.Email + " Token: " + token
 
 		link := "https://drewing.eu:16443/0.1/gomic/newsletter/verify/"
@@ -139,8 +166,7 @@ Ingmar Drewing
 
 		d := gomail.NewDialer(host, portInt, user, pass)
 		d.DialAndSend(m)
-	} else {
-		msg.Text = "address already registered"
+
 	}
 
 	response.WriteEntity(msg)

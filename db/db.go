@@ -16,10 +16,10 @@ func Initialize() {
 	db, _ = sql.Open("mysql", dsn)
 }
 
-func AddEmailAddress(email string, token string) {
-	stmt, err := db.Prepare("INSERT INTO newsletter_addresses(email, double_opt_mail_token) VALUES(?, ?)")
+func AddEmailAddress(email string, token string, deletion_token string) {
+	stmt, err := db.Prepare("INSERT INTO newsletter_addresses(email, double_opt_mail_token, deletion_token ) VALUES(?, ?, ?)")
 	handleErr(err)
-	_, err = stmt.Exec(email, token)
+	_, err = stmt.Exec(email, token, deletion_token)
 	handleErr(err)
 }
 
@@ -37,10 +37,17 @@ func TokenExists(token string) bool {
 	return amount != "0"
 }
 
-func DeleteEmailAddressWithToken(token string) {
-	stmt, err := db.Prepare("DELETE FROM newsletter_addresses WHERE double_opt_mail_token=?")
+func DeletionTokenExists(token string) bool {
+	var amount string
+	err := db.QueryRow("SELECT count(*) FROM newsletter_addresses WHERE  deletion_token=?", token).Scan(&amount)
 	handleErr(err)
-	_, err = stmt.Exec(token)
+	return amount != "0"
+}
+
+func DeleteEmailAddressWithToken(deletion_token string) {
+	stmt, err := db.Prepare("DELETE FROM newsletter_addresses WHERE deletion_token=?")
+	handleErr(err)
+	_, err = stmt.Exec(deletion_token)
 	handleErr(err)
 }
 

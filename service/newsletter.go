@@ -192,26 +192,28 @@ func Send(request *restful.Request, response *restful.Response) {
 	}
 
 	user, pass, host, port := config.GetSmtpCredentials()
+	portInt, _ := strconv.Atoi(port)
+	dialer := gomail.NewDialer(host, portInt, user, pass)
 	recipients := db.GetNewsletterRecipients()
 
-	m := gomail.NewMessage()
-	m.SetHeader("From", user)
-	m.SetHeader("Bcc", recipients...)
-	m.SetHeader("Subject", n.Subject)
-	m.SetBody("text/plain", n.Body)
-
-	portInt, _ := strconv.Atoi(port)
-
-	d := gomail.NewDialer(host, portInt, user, pass)
-	err = d.DialAndSend(m)
-	if err != nil {
-		response.WriteErrorString(500, "500: Internal Server Error("+err.Error()+")")
-		return
+	for _, recipient := range recipients {
+		sendMail(user, dialer, n.Subject, n.Body, recipient)
 	}
 
 	msg := new(Msg)
-	msg.Text = "Sent newsletter to: " + strings.Join(recipients, ", ")
+	msg.Text = "Newsletter sent"
 	response.WriteEntity(msg)
+}
+
+func sendMail(user string, dialer *gomail.Dialer, subject string, body string, recipient string) {
+
+	m := gomail.NewMessage()
+	m.SetHeader("From", user)
+	m.SetHeader("To", recipient)
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/plain", body)
+
+	dialer.DialAndSend(m)
 }
 
 func basicAuthenticate(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {

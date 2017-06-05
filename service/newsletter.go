@@ -115,13 +115,14 @@ func Add(request *restful.Request, response *restful.Response) {
 		link := "https://drewing.eu:16443/0.1/gomic/newsletter/verify/"
 		link += token
 
-		email_text := `Hello,
-I just received word that you want to subscribe to the DevAbo.de newsletter.
-If this is true just click on the following link and you'll receive the comic updates as e-mail messages:
+		email_text := `Hi there,
+
+I received word that you want to subscribe to the DevAbo.de newsletter.
+All you need to do to complete the subscription is to click on the following link:
 
 %s
 
-In case this e-mail has reached you in error and you aren't interested just delete this e-mail and you will not be bothered again.
+In case this e-mail has reached you in error and you aren't interested, just delete this e-mail and you will not be bothered again.
 
 Sincerely
 

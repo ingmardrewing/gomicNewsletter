@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"log"
 	"math/rand"
@@ -105,7 +106,7 @@ func Add(request *restful.Request, response *restful.Response) {
 		response.WriteErrorString(400, "400: Bad Request ("+err.Error()+")")
 		return
 	}
-	token := getRandomString(255)
+	token := getRandomString(60)
 	msg := new(Msg)
 	if !db.AddressExists(c.Email) {
 		db.AddEmailAddress(c.Email, token)
@@ -114,19 +115,31 @@ func Add(request *restful.Request, response *restful.Response) {
 		link := "https://drewing.eu:16443/0.1/gomic/newsletter/verify/"
 		link += token
 
+		email_text := `Hello,
+I just received word that you want to subscribe to the DevAbo.de newsletter.
+If this is true just click on the following link and you'll receive the comic updates as e-mail messages:
+
+%s
+
+In case this e-mail has reached you in error and you aren't interested just delete this e-mail and you will not be bothered again.
+
+Sincerely
+
+Ingmar Drewing
+`
 		user, pass, host, port := config.GetSmtpCredentials()
 		m := gomail.NewMessage()
 		m.SetHeader("From", user)
 		m.SetHeader("To", c.Email)
 		m.SetHeader("Subject", "Newsletter Verification")
-		m.SetBody("text/plain", link)
+		m.SetBody("text/plain", fmt.Sprintf(email_text, link))
 
 		portInt, _ := strconv.Atoi(port)
 
 		d := gomail.NewDialer(host, portInt, user, pass)
 		d.DialAndSend(m)
 	} else {
-		msg.Text = c.Email + " already registered"
+		msg.Text = "address already registered"
 	}
 
 	response.WriteEntity(msg)

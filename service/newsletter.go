@@ -175,7 +175,7 @@ Ingmar Drewing
 func Delete(request *restful.Request, response *restful.Response) {
 	token := request.PathParameter("token")
 	msg := new(Msg)
-	if db.TokenExists(token) {
+	if db.DeletionTokenExists(token) {
 		db.DeleteEmailAddressWithToken(token)
 		msg.Text = "Deleted mailadress with token " + token
 	} else {
@@ -255,7 +255,7 @@ func checkNewsletter(n *Newsletter) error {
 		msg = append(msg, "No subject for newsletter given")
 	}
 	if len(n.Body) == 0 {
-		msg = append(msg, "No text for newsletter given")
+		msg = append(msg, "No body for newsletter given")
 	}
 
 	if len(msg) > 0 {

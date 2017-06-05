@@ -58,23 +58,29 @@ func AddressExists(email string) bool {
 	return amount != "0"
 }
 
-func GetNewsletterRecipients() []string {
-	rows, err := db.Query("SELECT email FROM newsletter_addresses WHERE double_opt_verified = 1")
+type NlContainer struct {
+	Email         string
+	DeletionToken string
+}
+
+func GetNewsletterRecipients() []NlContainer {
+	rows, err := db.Query("SELECT email, deletion_token FROM newsletter_addresses WHERE double_opt_verified = 1")
 	handleErr(err)
 	defer rows.Close()
 	var (
-		email  string
-		emails []string
+		email         string
+		deletionToken string
+		ncs           []NlContainer
 	)
 
 	for rows.Next() {
-		err := rows.Scan(&email)
+		err := rows.Scan(&email, &deletionToken)
 		handleErr(err)
-		emails = append(emails, email)
+		ncs = append(ncs, NlContainer{email, deletionToken})
 	}
 	err = rows.Err()
 	handleErr(err)
-	return emails
+	return ncs
 }
 
 func handleErr(err error) {

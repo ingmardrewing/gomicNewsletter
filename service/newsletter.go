@@ -197,7 +197,8 @@ func Send(request *restful.Request, response *restful.Response) {
 	recipients := db.GetNewsletterRecipients()
 
 	for _, recipient := range recipients {
-		sendMail(user, dialer, n.Subject, n.Body, recipient)
+		txt := n.Body + "\n\nIf you wish to stop receiving e-mails like this one, just click on the following link: https://drewing.eu:16443/0.1/gomic/newsletter/delete/" + recipient.DeletionToken
+		sendMail(user, dialer, n.Subject, txt, recipient.Email)
 	}
 
 	msg := new(Msg)
